@@ -96,19 +96,19 @@ impl HmrStatsState {
             callback_panics: self.callback_panics.load(Ordering::Acquire),
             queue_capacity: config.queue_capacity,
             queue_depth,
-            queue_depth_peak: self
-                .queue_depth_peak
-                .load(Ordering::Acquire),
+            queue_depth_peak: self.queue_depth_peak.load(Ordering::Acquire),
         }
     }
 
     fn record_queue_depth(&self, observed: usize) {
         let mut peak = self.queue_depth_peak.load(Ordering::Acquire);
         while observed > peak {
-            match self
-                .queue_depth_peak
-                .compare_exchange(peak, observed, Ordering::AcqRel, Ordering::Acquire)
-            {
+            match self.queue_depth_peak.compare_exchange(
+                peak,
+                observed,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
                 Ok(_) => break,
                 Err(current) => peak = current,
             }
@@ -217,6 +217,7 @@ impl Hmr {
         let deps = Arc::clone(&self.deps);
         let callbacks = Arc::clone(&self.callbacks);
         let sender = Arc::clone(&self.sender);
+        let sender_for_watcher = Arc::clone(&sender);
         let recent = Arc::clone(&self.recent);
         let queue_len = Arc::clone(&self.queue_len);
         let stats = Arc::clone(&self.stats);
@@ -233,15 +234,13 @@ impl Hmr {
                         }
                         let path = display_path(&path, base.as_deref());
                         let hmr_event = match event.kind {
-                            EventKind::Create(_) | EventKind::Modify(_) => {
-                                HmrEvent::Changed(path)
-                            }
+                            EventKind::Create(_) | EventKind::Modify(_) => HmrEvent::Changed(path),
                             EventKind::Remove(_) => HmrEvent::Removed(path),
                             _ => continue,
                         };
                         dispatch_or_emit(
                             hmr_event,
-                            &sender,
+                            &sender_for_watcher,
                             &queue_len,
                             &stats,
                             &events,
@@ -252,7 +251,7 @@ impl Hmr {
                 }
                 Err(error) => dispatch_or_emit(
                     HmrEvent::Error(error.to_string()),
-                    &sender,
+                    &sender_for_watcher,
                     &queue_len,
                     &stats,
                     &events,
@@ -266,7 +265,11 @@ impl Hmr {
         watcher
             .watch(&root_path, RecursiveMode::Recursive)
             .map_err(|error| {
-                stop_runtime(Arc::clone(&sender), Arc::clone(&self.worker), Arc::clone(&self.queue_len));
+                stop_runtime(
+                    Arc::clone(&sender),
+                    Arc::clone(&self.worker),
+                    Arc::clone(&self.queue_len),
+                );
                 error.to_string()
             })?;
 
@@ -380,7 +383,9 @@ fn emit_event(
     if let Some(changed_path) = changed_path {
         emitted.extend(dependents_of(&changed_path, &lock(deps)));
     }
-    stats.total_emitted.fetch_add(emitted.len() as u64, Ordering::AcqRel);
+    stats
+        .total_emitted
+        .fetch_add(emitted.len() as u64, Ordering::AcqRel);
     lock(events).extend(emitted.iter().cloned());
     let callbacks = lock(callbacks).clone();
     for event in &emitted {

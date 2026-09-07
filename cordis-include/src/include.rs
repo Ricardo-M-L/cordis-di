@@ -422,7 +422,8 @@ mod tests {
     fn blocks_overly_large_files() {
         let path = temp_path("json");
         std::fs::write(&path, "{ \"a\": 1 }").expect("write tiny fixture");
-        let plugin = IncludePlugin::with_options("json", Vec::new(), 1, DEFAULT_MAX_PATCH_DEPTH, false);
+        let plugin =
+            IncludePlugin::with_options("json", Vec::new(), 1, DEFAULT_MAX_PATCH_DEPTH, false);
         let result = plugin.load_path(&path);
         assert!(matches!(result, Err(IncludeError::FileTooLarge(_, _))));
         std::fs::remove_file(path).expect("remove fixture");

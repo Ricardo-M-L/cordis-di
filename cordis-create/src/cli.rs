@@ -185,7 +185,10 @@ fn main() {{
 
     fn cordis_core_dependency(&self) -> Result<String, CreateError> {
         if let Some(path) = &self.options.core_path {
-            return Ok(format!("cordis-core = {{ path = \"{}\", package = \"cordis-core\" }}", path));
+            return Ok(format!(
+                "cordis-core = {{ path = \"{}\", package = \"cordis-core\" }}",
+                path
+            ));
         }
 
         if let Some(version) = &self.options.core_version {
@@ -362,7 +365,17 @@ mod tests {
             .expect("generate project");
         let manifest =
             std::fs::read_to_string(result.join("Cargo.toml")).expect("read generated manifest");
-        assert!(manifest.contains("cordis-core = { path = \"../cordis-core\""));
+        let parsed: toml::Value = manifest
+            .parse()
+            .expect("generated manifest must be valid TOML");
+        let dependency = parsed
+            .get("dependencies")
+            .and_then(|dependencies| dependencies.get("cordis-core"))
+            .expect("manifest must depend on cordis-core");
+        assert_eq!(
+            dependency.get("path").and_then(toml::Value::as_str),
+            Some("../cordis-core")
+        );
         std::fs::remove_dir_all(target).expect("remove generated project");
     }
 
