@@ -383,6 +383,18 @@ mod tests {
     use super::*;
     use futures::StreamExt;
     use std::sync::atomic::AtomicUsize;
+    use std::time::Instant;
+
+    /// Poll until `cond` holds. CI runners (especially shared macOS machines)
+    /// can delay timer threads far beyond the nominal durations, so tests wait
+    /// with a generous budget instead of a fixed sleep margin.
+    async fn wait_until(cond: impl FnMut() -> bool) {
+        let mut cond = cond;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !cond() && Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    }
 
     #[tokio::test]
     async fn timeout_runs_once() {
@@ -395,7 +407,7 @@ mod tests {
             },
             20,
         );
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        wait_until(|| counter.load(Ordering::SeqCst) >= 1).await;
         assert_eq!(counter.load(Ordering::SeqCst), 1);
         assert!(handle.is_stopped());
     }
@@ -413,7 +425,7 @@ mod tests {
         );
         let baseline = counter.load(Ordering::SeqCst);
         assert_eq!(baseline, 0);
-        tokio::time::sleep(Duration::from_millis(90)).await;
+        wait_until(|| counter.load(Ordering::SeqCst) >= 2).await;
         handle.stop();
         let count = counter.load(Ordering::SeqCst);
         assert!(count >= 2);
@@ -438,7 +450,7 @@ mod tests {
         debounced.call();
         debounced.call();
         debounced.call();
-        tokio::time::sleep(Duration::from_millis(60)).await;
+        wait_until(|| counter.load(Ordering::SeqCst) >= 1).await;
         assert_eq!(counter.load(Ordering::SeqCst), 1);
     }
 
@@ -456,7 +468,7 @@ mod tests {
         let handle_clone = handle.clone();
 
         drop(handle);
-        tokio::time::sleep(Duration::from_millis(35)).await;
+        wait_until(|| counter.load(Ordering::SeqCst) > 0).await;
         let running_count = counter.load(Ordering::SeqCst);
         assert!(running_count > 0);
 
