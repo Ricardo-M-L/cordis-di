@@ -1,10 +1,9 @@
 [package]
-name = "cordis-group"
+name = "cordis-di-group"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
-publish = false
-description = "Entry grouping for cordis-rs"
+description = "Entry grouping for cordis-di"
 license = "MIT"
-homepage = "https://github.com/Ricardo-M-L/cordis-rs"
-repository = "https://github.com/Ricardo-M-L/cordis-rs"
+homepage = "https://github.com/Ricardo-M-L/cordis-di"
+repository = "https://github.com/Ricardo-M-L/cordis-di"

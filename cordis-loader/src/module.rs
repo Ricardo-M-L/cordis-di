@@ -1,7 +1,7 @@
 //! Rust module-factory registration and path resolution.
 
 use crate::entry::EntryConfig;
-use cordis_core::Plugin;
+use cordis_di_core::Plugin;
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};

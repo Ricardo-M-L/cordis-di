@@ -1,13 +1,12 @@
 [package]
-name = "cordis-hmr"
+name = "cordis-di-hmr"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
-publish = false
-description = "Hot Module Replacement for cordis-rs"
+description = "Hot Module Replacement for cordis-di"
 license = "MIT"
-homepage = "https://github.com/Ricardo-M-L/cordis-rs"
-repository = "https://github.com/Ricardo-M-L/cordis-rs"
+homepage = "https://github.com/Ricardo-M-L/cordis-di"
+repository = "https://github.com/Ricardo-M-L/cordis-di"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

@@ -1,4 +1,4 @@
-# Contributing to cordis-rs
+# Contributing to cordis-di
 
 Thanks for your interest in contributing! Here's how to get started:
 
@@ -8,8 +8,8 @@ Install Rust 1.85 or newer with the `rustfmt` and `clippy` components.
 
 ```bash
 # 1. Fork and clone
-git clone https://github.com/<your-user>/cordis-rs.git
-cd cordis-rs
+git clone https://github.com/<your-user>/cordis-di.git
+cd cordis-di
 
 # 2. Build
 cargo check --workspace --all-targets --locked

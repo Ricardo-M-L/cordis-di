@@ -2,7 +2,7 @@
 
 use crate::entry::{Entry, EntryConfig, EntryState};
 use crate::module::ModuleLoader;
-use cordis_core::{CordisContext, RegistryService};
+use cordis_di_core::{CordisContext, RegistryService};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
@@ -250,7 +250,7 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cordis_core::{LoggerService, Plugin};
+    use cordis_di_core::{LoggerService, Plugin};
 
     struct TestPlugin(String);
 

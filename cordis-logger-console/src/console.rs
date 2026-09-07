@@ -1,6 +1,6 @@
 //! Console log exporter — ANSI-colored output with labels and formatting.
 
-use cordis_core::logger::{Exporter, LoggerLevel, Message};
+use cordis_di_core::logger::{Exporter, LoggerLevel, Message};
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------

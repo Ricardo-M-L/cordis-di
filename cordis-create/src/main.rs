@@ -1,13 +1,13 @@
 use clap::Parser;
-use cordis_create::{CreateCli, CreateOptions};
+use cordis_di_create::{CreateCli, CreateOptions};
 use std::io::{self, Write};
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "cordis-create",
+    name = "cordis-di-create",
     version,
-    about = "Create a new cordis-rs project"
+    about = "Create a new cordis-di project"
 )]
 struct Arguments {
     /// Cargo package name.

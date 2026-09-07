@@ -1,6 +1,6 @@
 //! Runtime entry in a loader tree.
 
-use cordis_core::CordisContext;
+use cordis_di_core::CordisContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 

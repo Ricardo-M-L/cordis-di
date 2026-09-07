@@ -1,12 +1,66 @@
-# cordis-rs
+# cordis-di
 
-An experimental Rust adaptation of [Cordis](https://github.com/cordisjs/cordis), focused on typed scopes, deterministic plugin cleanup, event dispatch, configuration loading, and file-backed reload signals.
+A typed plugin & dependency-injection framework for Rust: fiber-scoped lifecycles, hierarchical contexts, an event bus with multiple dispatch modes, and file-backed reload signals.
 
-[![CI](https://github.com/Ricardo-M-L/cordis-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Ricardo-M-L/cordis-rs/actions/workflows/ci.yml)
+Inspired by [Cordis](https://github.com/cordisjs/cordis), the application framework behind the [Koishi](https://koishi.chat) ecosystem — rebuilt around Rust's type system instead of JavaScript proxies.
+
+[![CI](https://github.com/Ricardo-M-L/cordis-di/actions/workflows/ci.yml/badge.svg)](https://github.com/Ricardo-M-L/cordis-di/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/cordis-di-core.svg)](https://crates.io/crates/cordis-di-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Rust 1.85+](https://img.shields.io/badge/Rust-1.85%2B-orange.svg)](https://www.rust-lang.org)
 
-> This project is not a drop-in API-compatible port of the JavaScript framework. It uses explicit Rust types and registered module factories in places where Cordis relies on JavaScript proxies or dynamic module loading. The workspace is currently marked `publish = false` because several `cordis-*` crate names are owned by another crates.io project.
+> **On the name** — the `cordis` / `cordis-*` crate names on crates.io belong to the upstream Cordis project, so this framework publishes as `cordis-di-*`. An independent Rust port also exists ([dshbox/cordis-rs](https://github.com/dshbox/cordis-rs)); the two projects are unrelated.
+
+## Why
+
+Rust has plenty of DI containers and plenty of plugin systems, but few frameworks that treat **plugin lifecycle as a first-class, deterministic contract**:
+
+- **Fiber** — every plugin runs inside a validated lifecycle scope with RAII handles and LIFO cleanup. When a scope drops, every effect it registered is disposed — no leaks, no orphaned timers.
+- **Typed contexts** — hierarchical scopes with per-service isolation replace JS proxy magic. Service lookup is explicit and checked at compile time.
+- **Staged reload** — `Loader::reload()` stages a new fiber, and on failure rolls back all of its effects before retaining the old runtime. A failed reload cannot corrupt the running app.
+- **Production hardening** — bounded queues with backpressure accounting, panic-safe callbacks, hardened config loading (size/depth limits, strict paths).
+
+## Quick start
+
+```bash
+cargo add cordis-di-core
+```
+
+```rust
+use cordis_di_core::{disposer, Fiber};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+let fiber = Fiber::new();
+let cleaned = Arc::new(AtomicBool::new(false));
+let cleanup_flag = Arc::clone(&cleaned);
+let _effect = fiber.effect(move || disposer(move || {
+    cleanup_flag.store(true, Ordering::SeqCst);
+}));
+
+fiber.dispose(); // disposers run in LIFO order
+assert!(cleaned.load(Ordering::SeqCst));
+```
+
+Scaffold a full project:
+
+```bash
+cargo install cordis-di-create
+cordis-di-create my-app --git
+```
+
+## How it compares to Cordis (TypeScript)
+
+| | cordis (TS) | cordis-di |
+|---|---|---|
+| Service lookup | runtime `Proxy` | explicit types + registered factories |
+| Module loading | dynamic `import()` | statically registered module factories |
+| Plugin lifecycle | ctx effects | Fiber: validated states, RAII, LIFO cleanup |
+| Reload | process/HMR-dependent | staged fiber reload with rollback on failure |
+| Config | JS objects | JSON/YAML/TOML with safe patches and bounds |
+| Hot reload | JS module swap | fs watcher + reload events (app maps them to factories) |
+
+Not a drop-in API-compatible port — see the boundary notes below for exactly what differs and why.
 
 ## Implemented behavior
 
@@ -23,17 +77,17 @@ An experimental Rust adaptation of [Cordis](https://github.com/cordisjs/cordis),
 
 ## Workspace
 
-```text
-cordis-core/             Core runtime
-cordis-timer/            Timeout, interval, debounce, throttle
-cordis-logger-console/   ANSI console exporter
-cordis-utils/            Shared collections and configuration helpers
-cordis-group/            Entry grouping
-cordis-include/          JSON/YAML/TOML loading and patching
-cordis-loader/           Entry tree and registered module factories
-cordis-hmr/              File watcher and reload dependency graph
-cordis-create/           Project scaffolding library and CLI
-```
+| Crate | Purpose |
+|---|---|
+| [`cordis-di-core`](cordis-core/) | Core runtime: Fiber, Context, Events, Registry, Logger |
+| [`cordis-di-timer`](cordis-timer/) | Timeout, interval, debounce, throttle |
+| [`cordis-di-logger-console`](cordis-logger-console/) | ANSI console exporter |
+| [`cordis-di-utils`](cordis-utils/) | Shared collections and configuration helpers |
+| [`cordis-di-group`](cordis-group/) | Entry grouping |
+| [`cordis-di-include`](cordis-include/) | JSON/YAML/TOML loading and patching |
+| [`cordis-di-loader`](cordis-loader/) | Entry tree and registered module factories |
+| [`cordis-di-hmr`](cordis-hmr/) | File watcher and reload dependency graph |
+| [`cordis-di-create`](cordis-create/) | Project scaffolding library and CLI |
 
 ## Build and test
 
@@ -46,41 +100,6 @@ cargo test --workspace --all-targets --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
-## Fiber cleanup
-
-```rust
-use cordis_core::{disposer, Fiber};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-
-let fiber = Fiber::new();
-let cleaned = Arc::new(AtomicBool::new(false));
-let cleanup_flag = Arc::clone(&cleaned);
-let _effect = fiber.effect(move || disposer(move || {
-    cleanup_flag.store(true, Ordering::SeqCst);
-}));
-
-fiber.dispose();
-assert!(cleaned.load(Ordering::SeqCst));
-```
-
-## Project generator
-
-```bash
-cargo run -p cordis-create -- my-cordis-app --target /tmp/my-cordis-app --git
-```
-
-To generate a project that compiles against a local checkout or a released version:
-
-```bash
-cargo run -p cordis-create -- my-cordis-app --core-path ../cordis-core
-cargo run -p cordis-create -- my-cordis-app --core-version 0.1.0
-```
-
-Without these flags, `cordis-create` keeps the existing behavior of using the repository git source.
-
-Existing non-empty directories are preserved unless `--force` is explicitly supplied.
-
 ## Runtime integration boundary
 
 `Loader::with_runtime()` binds a root `CordisContext` to one `RegistryService` and shared event bus. Each plugin is prepared in a Loading `Fiber`; services and listeners registered during `Plugin::apply()` remain hidden until activation and are removed with that Fiber. Per-name isolation labels key both plugins and services, while Context intercepts are resolved into the configuration passed to module factories. Reload stages a new Fiber and cleans all of its effects on failure before retaining the old runtime.
@@ -89,14 +108,14 @@ This explicit lifecycle replaces Cordis' JavaScript Proxy-based service lookup. 
 
 ## HMR boundary
 
-`cordis-hmr` performs real filesystem observation and emits `Changed`, `Removed`, and transitive `Reload` events. Rust cannot safely unload arbitrary statically linked code. Applications should register module factories with `cordis-loader` and call `Loader::reload()` in response to an accepted reload event.
+`cordis-di-hmr` performs real filesystem observation and emits `Changed`, `Removed`, and transitive `Reload` events. Rust cannot safely unload arbitrary statically linked code. Applications should register module factories with `cordis-di-loader` and call `Loader::reload()` in response to an accepted reload event.
 
 ## HMR backpressure and observability
 
-Since callbacks can be slow, `cordis-hmr` uses a bounded queue (`queue_capacity`, default `1024`) between the watcher callback and worker thread. Slow consumers therefore drop events instead of blocking file-system processing.
+Since callbacks can be slow, `cordis-di-hmr` uses a bounded queue (`queue_capacity`, default `1024`) between the watcher callback and worker thread. Slow consumers therefore drop events instead of blocking file-system processing.
 
 ```rust
-use cordis_hmr::{Hmr, HmrConfig};
+use cordis_di_hmr::{Hmr, HmrConfig};
 
 let hmr = Hmr::new(
     "app",
@@ -120,14 +139,14 @@ Use `stats()` for SRE diagnostics (`total_received`, `total_emitted`, `total_dro
 
 ## Include hardening
 
-`cordis-include` adds security-oriented options for configuration loading:
+`cordis-di-include` adds security-oriented options for configuration loading:
 
 - `max_file_bytes` bounds input size (default 1MB)
 - `max_patch_depth` bounds path depth (default 64)
 - `strict` mode for scalar-segment safety in intermediate path traversal
 
 ```rust
-use cordis_include::{IncludePlugin, Patch};
+use cordis_di_include::{IncludePlugin, Patch};
 use serde_json::json;
 use std::collections::HashMap;
 
@@ -145,6 +164,16 @@ let mut config: HashMap<String, serde_json::Value> = [
 
 plugin.apply_patches(&mut config).expect("apply patches");
 ```
+
+## Project generator options
+
+```bash
+cordis-di-create my-cordis-app --target /tmp/my-cordis-app --git
+cordis-di-create my-cordis-app --core-path ../cordis-core
+cordis-di-create my-cordis-app --core-version 0.1.0
+```
+
+Without these flags, `cordis-di-create` keeps the existing behavior of using the repository git source. Existing non-empty directories are preserved unless `--force` is explicitly supplied.
 
 ## License
 

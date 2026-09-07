@@ -117,7 +117,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
-name = "cordis-core"
+name = "cordis-di-core"
 version = "0.1.0"
 dependencies = [
  "serde",
@@ -126,7 +126,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cordis-create"
+name = "cordis-di-create"
 version = "0.1.0"
 dependencies = [
  "clap",
@@ -135,11 +135,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "cordis-group"
+name = "cordis-di-group"
 version = "0.1.0"
 
 [[package]]
-name = "cordis-hmr"
+name = "cordis-di-hmr"
 version = "0.1.0"
 dependencies = [
  "notify",
@@ -147,7 +147,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cordis-include"
+name = "cordis-di-include"
 version = "0.1.0"
 dependencies = [
  "serde",
@@ -157,24 +157,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "cordis-loader"
+name = "cordis-di-loader"
 version = "0.1.0"
 dependencies = [
- "cordis-core",
+ "cordis-di-core",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "cordis-logger-console"
+name = "cordis-di-logger-console"
 version = "0.1.0"
 dependencies = [
- "cordis-core",
+ "cordis-di-core",
  "serde",
 ]
 
 [[package]]
-name = "cordis-timer"
+name = "cordis-di-timer"
 version = "0.1.0"
 dependencies = [
  "futures",
@@ -182,7 +182,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cordis-utils"
+name = "cordis-di-utils"
 version = "0.1.0"
 dependencies = [
  "serde_json",

@@ -1,15 +1,14 @@
 [package]
-name = "cordis-core"
+name = "cordis-di-core"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
-publish = false
-description = "Core of the cordis-rs framework — Fiber, Context, Events, Registry, Reflect, Logger"
+description = "Core of the cordis-di framework — Fiber, Context, Events, Registry, Reflect, Logger"
 license = "MIT"
-homepage = "https://github.com/Ricardo-M-L/cordis-rs"
-repository = "https://github.com/Ricardo-M-L/cordis-rs"
+homepage = "https://github.com/Ricardo-M-L/cordis-di"
+repository = "https://github.com/Ricardo-M-L/cordis-di"
 readme = "../README.md"
-keywords = ["cordis", "framework", "fiber", "events", "logger"]
+keywords = ["cordis-di", "framework", "fiber", "events", "logger"]
 categories = ["asynchronous", "web-programming", "development-tools"]
 
 [dependencies]

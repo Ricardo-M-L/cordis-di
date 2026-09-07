@@ -1,4 +1,4 @@
-//! Project scaffolding implementation used by the `cordis-create` binary.
+//! Project scaffolding implementation used by the `cordis-di-create` binary.
 
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -155,7 +155,7 @@ impl CreateCli {
         }
 
         std::fs::create_dir_all(target.join("src"))?;
-        let core_dependency = self.cordis_core_dependency()?;
+        let core_dependency = self.cordis_di_core_dependency()?;
         let cargo_toml = format!(
             r#"[package]
 name = "{}"
@@ -169,7 +169,7 @@ edition = "2021"
         );
         std::fs::write(target.join("Cargo.toml"), cargo_toml)?;
         let main_rs = format!(
-            r#"use cordis_core::CordisContext;
+            r#"use cordis_di_core::CordisContext;
 
 fn main() {{
     let context = CordisContext::new();
@@ -183,20 +183,20 @@ fn main() {{
         Ok(())
     }
 
-    fn cordis_core_dependency(&self) -> Result<String, CreateError> {
+    fn cordis_di_core_dependency(&self) -> Result<String, CreateError> {
         if let Some(path) = &self.options.core_path {
             return Ok(format!(
-                "cordis-core = {{ path = \"{}\", package = \"cordis-core\" }}",
+                "cordis-di-core = {{ path = \"{}\", package = \"cordis-di-core\" }}",
                 path
             ));
         }
 
         if let Some(version) = &self.options.core_version {
-            return Ok(format!("cordis-core = \"{}\"", version));
+            return Ok(format!("cordis-di-core = \"{}\"", version));
         }
 
         Ok(
-            "cordis-core = { git = \"https://github.com/Ricardo-M-L/cordis-rs\", package = \"cordis-core\" }"
+            "cordis-di-core = { git = \"https://github.com/Ricardo-M-L/cordis-di\", package = \"cordis-di-core\" }"
                 .to_string(),
         )
     }
@@ -346,7 +346,7 @@ mod tests {
             .expect("generate project");
         let manifest =
             std::fs::read_to_string(result.join("Cargo.toml")).expect("read generated manifest");
-        assert!(manifest.contains("cordis-core"));
+        assert!(manifest.contains("cordis-di-core"));
         assert!(manifest.contains("[profile.release]"));
         assert!(result.join("src/main.rs").exists());
         std::fs::remove_dir_all(target).expect("remove generated project");
@@ -356,7 +356,7 @@ mod tests {
     fn allows_local_path_dependency_override() {
         let cli = CreateCli::new(CreateOptions {
             name: "local-core-app".to_string(),
-            core_path: Some("../cordis-core".to_string()),
+            core_path: Some("../cordis-di-core".to_string()),
             ..CreateOptions::default()
         });
         let target = temp_target("path-dep");
@@ -370,11 +370,11 @@ mod tests {
             .expect("generated manifest must be valid TOML");
         let dependency = parsed
             .get("dependencies")
-            .and_then(|dependencies| dependencies.get("cordis-core"))
-            .expect("manifest must depend on cordis-core");
+            .and_then(|dependencies| dependencies.get("cordis-di-core"))
+            .expect("manifest must depend on cordis-di-core");
         assert_eq!(
             dependency.get("path").and_then(toml::Value::as_str),
-            Some("../cordis-core")
+            Some("../cordis-di-core")
         );
         std::fs::remove_dir_all(target).expect("remove generated project");
     }
@@ -392,7 +392,7 @@ mod tests {
             .expect("generate project");
         let manifest =
             std::fs::read_to_string(result.join("Cargo.toml")).expect("read generated manifest");
-        assert!(manifest.contains("cordis-core = \"0.1.0\""));
+        assert!(manifest.contains("cordis-di-core = \"0.1.0\""));
         std::fs::remove_dir_all(target).expect("remove generated project");
     }
 
