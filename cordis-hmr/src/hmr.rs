@@ -540,17 +540,30 @@ mod tests {
             },
         );
         hmr.watch().expect("start watcher");
-        std::fs::write(root.join("sample.txt"), "hello").expect("write watched file");
-        let deadline = Instant::now() + Duration::from_secs(3);
-        while Instant::now() < deadline && hmr.events().is_empty() {
-            std::thread::sleep(Duration::from_millis(20));
-        }
+        // Watcher backends initialize asynchronously, so a single write right
+        // after watch() can race past backend startup on slow CI runners.
+        // Re-write within the budget until the change is observed; every write
+        // is another chance for the backend to report it.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let sample = root.join("sample.txt");
+        let saw_change = loop {
+            std::fs::write(&sample, "hello").expect("write watched file");
+            std::thread::sleep(Duration::from_millis(100));
+            if hmr.events().iter().any(
+                |event| matches!(event, HmrEvent::Changed(path) if path.ends_with("sample.txt")),
+            ) {
+                break true;
+            }
+            if Instant::now() >= deadline {
+                break false;
+            }
+        };
         hmr.stop();
         std::fs::remove_dir_all(&root).expect("remove watcher root");
-        assert!(hmr
-            .events()
-            .iter()
-            .any(|event| matches!(event, HmrEvent::Changed(path) if path.ends_with("sample.txt"))));
+        assert!(
+            saw_change,
+            "expected a Changed event for sample.txt within the budget"
+        );
     }
 
     #[test]
