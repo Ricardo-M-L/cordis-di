@@ -413,15 +413,21 @@ fn dispatch_or_emit(
         let sender = lock(sender);
         sender.clone()
     } {
+        // Reserve the queue slot before sending. The worker decrements on
+        // recv, so incrementing only after a successful try_send lets a fast
+        // worker wrap the counter below zero and the following +1 overflows.
+        // Reserving first keeps the count monotonic; failure paths roll back.
+        let new_depth = queue_len.fetch_add(1, Ordering::AcqRel) + 1;
         match sender.try_send(event.clone()) {
             Ok(()) => {
-                let new_depth = queue_len.fetch_add(1, Ordering::AcqRel) + 1;
                 stats.record_queue_depth(new_depth);
             }
             Err(mpsc::TrySendError::Full(_)) => {
+                queue_len.fetch_sub(1, Ordering::AcqRel);
                 stats.total_dropped.fetch_add(1, Ordering::AcqRel);
             }
             Err(mpsc::TrySendError::Disconnected(event)) => {
+                queue_len.fetch_sub(1, Ordering::AcqRel);
                 emit_event(event, events, deps, callbacks, stats);
             }
         }
