@@ -578,7 +578,14 @@ mod tests {
         hmr.stop();
         let stats = hmr.stats();
         std::fs::remove_dir_all(&root).expect("cleanup queue target");
-        assert_eq!(stats.total_received, 120);
+        // Watcher backends may also report real filesystem events for the
+        // watched directory itself, so require every simulated event to be
+        // counted without pinning the exact total.
+        assert!(
+            stats.total_received >= 120,
+            "expected at least the 120 simulated events, got {}",
+            stats.total_received
+        );
         assert!(stats.total_dropped > 0);
         assert!(stats.queue_depth <= 1);
     }

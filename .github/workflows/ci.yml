@@ -46,4 +46,7 @@ jobs:
       - name: Run cargo audit
         run: cargo audit
       - name: Verify workspace packageability
-        run: cargo package --workspace --locked --no-verify --all-features
+        # --list validates manifests and packaged file lists without resolving
+        # workspace-internal dependencies against the registry, which would
+        # fail until the first crates.io publish.
+        run: cargo package --workspace --locked --all-features --list
